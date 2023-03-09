@@ -19,7 +19,7 @@ class Trainer:
         self.metric_keys = ['psnr', 'ssim', 'lpips', 'lr_psnr']
         self.work_dir = hparams['work_dir']
         self.first_val = True
-
+        self.hparams = hparams
     def build_tensorboard(self, save_dir, name, **kwargs):
         log_dir = os.path.join(save_dir, name)
         os.makedirs(log_dir, exist_ok=True)
@@ -65,14 +65,14 @@ class Trainer:
         train_pbar = tqdm(dataloader, initial=training_step, total=float('inf'),
                           dynamic_ncols=True, unit='step')
         self.degrade =  util.SRMDPreprocessing(
-            self.scale[0],
-            kernel_size=self.args.blur_kernel,
-            blur_type=self.args.blur_type,
-            sig_min=self.args.sig_min,
-            sig_max=self.args.sig_max,
-            lambda_min=self.args.lambda_min,
-            lambda_max=self.args.lambda_max,
-            noise=self.args.noise
+            self.hparams['scale'],
+            kernel_size=self.hparams['blur_kernel'],
+            blur_type=self.hparams['blur_type'],
+            sig_min=self.hparams['sig_min'],
+            sig_max=self.hparams['sig_max'],
+            lambda_min=self.hparams['lambda_min'],
+            lambda_max=self.hparams['lambda_max'],
+            noise=self.hparams['noise']
         )
         for batch in train_pbar:
             if training_step % hparams['val_check_interval'] == 0:
