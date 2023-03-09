@@ -6,7 +6,43 @@ from utils.hparams import hparams
 from .module_util import make_layer, initialize_weights
 from .commons import Mish, SinusoidalPosEmb, RRDB, Residual, Rezero, LinearAttention
 from .commons import ResnetBlock, Upsample, Block, Downsample
+from builder import MoCo
+class Encoder(nn.Module):
+    def __init__(self):
+        super(Encoder, self).__init__()
 
+        self.E = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.1, True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.1, True),
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.1, True),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.1, True),
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.1, True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.1, True),
+            nn.AdaptiveAvgPool2d(1),
+        )
+        self.mlp = nn.Sequential(
+            nn.Linear(256, 256),
+            nn.LeakyReLU(0.1, True),
+            nn.Linear(256, 256),
+        )
+
+    def forward(self, x):
+        fea = self.E(x).squeeze(-1).squeeze(-1)
+        out = self.mlp(fea)
+
+        return fea, out
 
 class RRDBNet(nn.Module):
     def __init__(self, in_nc, out_nc, nf, nb, gc=32):
@@ -61,7 +97,7 @@ class Unet(nn.Module):
         self.cond_proj = nn.ConvTranspose2d(cond_dim * ((hparams['rrdb_num_block'] + 1) // 3),
                                             dim, hparams['sr_scale'] * 2, hparams['sr_scale'],
                                             hparams['sr_scale'] // 2)
-
+        self.E = MoCo(base_encoder=Encoder)
         self.time_pos_emb = SinusoidalPosEmb(dim)
         self.mlp = nn.Sequential(
             nn.Linear(dim, dim * 4),
@@ -120,14 +156,22 @@ class Unet(nn.Module):
         self.apply(_apply_weight_norm)
 
     def forward(self, x, time, cond, img_lr_up):
+        if self.training:
+            x_query = x[:, 0, ...]                          # b, c, h, w
+            x_key = x[:, 1, ...]                            # b, c, h, w
+
+            # degradation-aware represenetion learning
+            fea, logits, labels = self.E(x_query, x_key)
+        else:
+            fea = self.E(x, x)
         t = self.time_pos_emb(time)
         t = self.mlp(t)
 
         h = []
         cond = self.cond_proj(torch.cat(cond[2::3], 1))
         for i, (resnet, resnet2, downsample) in enumerate(self.downs):
-            x = resnet(x, t)
-            x = resnet2(x, t)
+            x = resnet(x, t, fea)
+            x = resnet2(x, t,fea)
             if i == 0:
                 x = x + cond
                 if hparams['res'] and hparams['up_input']:
@@ -142,8 +186,8 @@ class Unet(nn.Module):
 
         for resnet, resnet2, upsample in self.ups:
             x = torch.cat((x, h.pop()), dim=1)
-            x = resnet(x, t)
-            x = resnet2(x, t)
+            x = resnet(x, t,fea)
+            x = resnet2(x, t,fea)
             x = upsample(x)
 
         return self.final_conv(x)

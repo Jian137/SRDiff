@@ -4,8 +4,61 @@ import torch.nn.functional as F
 from einops import rearrange
 from torch import nn
 from torch.nn import Parameter
+import common
+
+class DA_conv(nn.Module):
+    def __init__(self, channels_in, channels_out, kernel_size, reduction):
+        super(DA_conv, self).__init__()
+        self.channels_out = channels_out
+        self.channels_in = channels_in
+        self.kernel_size = kernel_size
+
+        self.kernel = nn.Sequential(
+            nn.Linear(64, 64, bias=False),
+            nn.LeakyReLU(0.1, True),
+            nn.Linear(64, 64 * self.kernel_size * self.kernel_size, bias=False)
+        )
+        self.conv = common.default_conv(channels_in, channels_out, 1)
+        self.ca = CA_layer(channels_in, channels_out, reduction)
+
+        self.relu = nn.LeakyReLU(0.1, True)
+
+    def forward(self, x, fea):
+        '''
+        :param x[0]: feature map: B * C * H * W
+        :param x[1]: degradation representation: B * C
+        '''
+        b, c, h, w = x.size()
+
+        # branch 1
+        kernel = self.kernel(fea).view(-1, 1, self.kernel_size, self.kernel_size)
+        out = self.relu(F.conv2d(x.view(1, -1, h, w), kernel, groups=b*c, padding=(self.kernel_size-1)//2))
+        out = self.conv(out.view(b, -1, h, w))
+
+        # branch 2
+        out = out + self.ca(x,fea)
+
+        return out
 
 
+class CA_layer(nn.Module):
+    def __init__(self, channels_in, channels_out, reduction):
+        super(CA_layer, self).__init__()
+        self.conv_du = nn.Sequential(
+            nn.Conv2d(channels_in, channels_in//reduction, 1, 1, 0, bias=False),
+            nn.LeakyReLU(0.1, True),
+            nn.Conv2d(channels_in // reduction, channels_out, 1, 1, 0, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x,fea):
+        '''
+        :param x[0]: feature map: B * C * H * W
+        :param x[1]: degradation representation: B * C
+        '''
+        att = self.conv_du(fea[:, :, None, None])
+
+        return x* att
 class Residual(nn.Module):
     def __init__(self, fn):
         super().__init__()
@@ -51,21 +104,27 @@ class Block(nn.Module):
     def __init__(self, dim, dim_out, groups=8):
         super().__init__()
         if groups == 0:
-            self.block = nn.Sequential(
-                nn.ReflectionPad2d(1),
-                nn.Conv2d(dim, dim_out, 3),
-                Mish()
-            )
+
+            self.pad=  nn.ReflectionPad2d(1)
+            self.da = DA_conv(dim, dim_out, 3, 8)
+            self.conv = nn.Conv2d(dim, dim_out, 3)
+            self.mish = Mish()
+
         else:
             self.block = nn.Sequential(
                 nn.ReflectionPad2d(1),
-                nn.Conv2d(dim, dim_out, 3),
+                DA_conv(dim,dim_out,3,8),
+                nn.Conv2d(dim_out, dim_out, 3),
                 nn.GroupNorm(groups, dim_out),
                 Mish()
             )
 
-    def forward(self, x):
-        return self.block(x)
+    def forward(self, x,fea):
+        x = self.pad(x)
+        x = self.da(x,fea)
+        x = self.conv(x)
+        x = self.mish(x)
+        return x
 
 
 class ResnetBlock(nn.Module):
@@ -81,13 +140,13 @@ class ResnetBlock(nn.Module):
         self.block2 = Block(dim_out, dim_out, groups=groups)
         self.res_conv = nn.Conv2d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
 
-    def forward(self, x, time_emb=None, cond=None):
-        h = self.block1(x)
+    def forward(self, x, time_emb=None, fea=None, cond=None):
+        h = self.block1(x,fea)
         if time_emb is not None:
             h += self.mlp(time_emb)[:, :, None, None]
         if cond is not None:
             h += cond
-        h = self.block2(h)
+        h = self.block2(h,fea)
         return h + self.res_conv(x)
 
 
