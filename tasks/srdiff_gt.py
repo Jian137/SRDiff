@@ -24,7 +24,7 @@ class IxiDataSet2(SRDataSet):
         # self.scale = hparams['sr_scale']
         if prefix == 'valid':
             self.len = hparams['eval_batch_size'] * hparams['valid_steps']
-        # 验证设置
+        # 验证设置 只验证部分图片
         self.data_aug_transforms = transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.RandomRotation(20, resample=Image.BICUBIC),
@@ -47,17 +47,25 @@ class IxiDataSet2(SRDataSet):
             # TODO 数量判定
             ## n_patches = 
     def __getitem__(self, index):
-        hr, filename = self._load_file(index)
-        
-        pair = self.get_patch(hr)
-        # h,w,_ = pair[1].shape
-        
-        # lr_up = transform.resize(lr, (h, w),order=3)
-        # pair.append(lr_up)
-        hr = set_channel(*pair,n_channels=3)
-        pair_t = np2Tensor(*pair, rgb_range=255)
-        return {'img_hr': pair_t[0], 
-             'item_name': filename}
+        if self.train:
+            hr, filename = self._load_file(index)
+            
+            pair = self.get_patch(hr)
+            # h,w,_ = pair[1].shape
+            
+            # lr_up = transform.resize(lr, (h, w),order=3)
+            # pair.append(lr_up)
+            hr = set_channel(*pair,n_channels=3)
+            pair_t = np2Tensor(*pair, rgb_range=255)
+            return {'img_hr': pair_t[0], 
+                'item_name': filename}
+        else:
+            lr,hr = filename = self._load_file(index)
+            # pair = self.get_patch(hr,lr)
+            hr ,lr = set_channel(hr,lr,n_channels=3)
+            pair_t = np2Tensor(hr,lr, rgb_range=255)
+            return {'img_hr': pair_t[0],'img_lr':pair_t[0], 
+                'item_name': filename}
     def _load_file(self, idx):
         idx = self._get_index(idx)
         f_hr = self.images_hr[idx]
@@ -67,7 +75,10 @@ class IxiDataSet2(SRDataSet):
         
         hr = imageio.imread(f_hr)
         # lr = np.load(f_lr)
-        
+        if !self.train:
+            f_lr = self.images_lr[idx]
+            lr = imageio.imread(f_lr)
+            return lr,hr,filename
         # h,w = hr.shape
 
         # hr = np.expand_dims(hr,axis=2)
@@ -88,18 +99,18 @@ class IxiDataSet2(SRDataSet):
 
     def get_patch(self, hr):
         # scale = hparams['sr_scale']# TODO
-        if self.train:
-            hr = get_patch(
-                hr,
-                patch_size=self.patch_size,
-                scale=hparams['sr_scale'],
-                multi=False,
-                input_large=False
-            )
+        # if self.train:
+        hr = get_patch(
+            hr,
+            patch_size=self.patch_size,
+            scale=hparams['sr_scale'],
+            multi=False,
+            input_large=False
+        )
             # if not self.args.no_augment: lr, hr = augment(lr, hr)# TODO 数据扩增
-        else:
-            ih, iw = lr.shape[:2]
-            hr = hr[0:ih * scale, 0:iw * scale]
+        # else:
+        #     ih, iw = lr.shape[:2]
+        #     hr = hr[0:ih * scale, 0:iw * scale]
 
         return [hr]
 class IxiDataSet(SRDataSet):

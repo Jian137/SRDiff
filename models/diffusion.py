@@ -68,6 +68,7 @@ class GaussianDiffusion(nn.Module):
         # condition net
         self.rrdb = rrdb_net
         self.ssim_loss = SSIM(window_size=11)
+        self.contrast_loss = torch.nn.CrossEntropyLoss().cuda()
         if hparams['aux_percep_loss']:
             self.percep_loss_fn = [PerceptualLoss()]
 
@@ -167,6 +168,7 @@ class GaussianDiffusion(nn.Module):
                 ret['aux_ssim'] = 1 - self.ssim_loss(rrdb_out, img_hr)
             if hparams['aux_percep_loss']:
                 ret['aux_percep'] = self.percep_loss_fn[0](img_hr, rrdb_out)
+            # ret['contrast_loss'] = self.contrast_loss(img_hr,rrdb_out)# TODO 添加对比损失
         # x_recon = self.res2img(x_recon, img_lr_up)
         x_tp1 = self.res2img(x_tp1, img_lr_up)
         x_t = self.res2img(x_t, img_lr_up)

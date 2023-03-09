@@ -64,6 +64,16 @@ class Trainer:
 
         train_pbar = tqdm(dataloader, initial=training_step, total=float('inf'),
                           dynamic_ncols=True, unit='step')
+        self.degrade =  util.SRMDPreprocessing(
+            self.scale[0],
+            kernel_size=self.args.blur_kernel,
+            blur_type=self.args.blur_type,
+            sig_min=self.args.sig_min,
+            sig_max=self.args.sig_max,
+            lambda_min=self.args.lambda_min,
+            lambda_max=self.args.lambda_max,
+            noise=self.args.noise
+        )
         for batch in train_pbar:
             if training_step % hparams['val_check_interval'] == 0:
                 with torch.no_grad():
