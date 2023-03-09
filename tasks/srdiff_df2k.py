@@ -17,7 +17,7 @@ class Df2kDataSet(SRDataSet):
     def __init__(self, prefix='train'):
         super().__init__('train' if prefix == 'train' else 'test')
         self.patch_size = hparams['patch_size']
-        self.patch_size_lr = hparams['patch_size'] // hparams['sr_scale']
+        # self.patch_size_lr = hparams['patch_size'] // hparams['sr_scale']
         if prefix == 'valid':
             self.len = hparams['eval_batch_size'] * hparams['valid_steps']
 
