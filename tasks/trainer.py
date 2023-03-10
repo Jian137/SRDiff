@@ -1,7 +1,9 @@
 import importlib
 import os
 import subprocess
-
+import sys
+sys.path.append("../../")
+sys.path.append("./")
 import torch
 from PIL import Image
 from tqdm import tqdm
@@ -9,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from utils.hparams import hparams, set_hparams
 import numpy as np
 from utils.utils import plot_img, move_to_cuda, load_checkpoint, save_checkpoint, tensors_to_scalars, load_ckpt, Measure
-
+from utils import util
 
 class Trainer:
     def __init__(self):
@@ -66,7 +68,7 @@ class Trainer:
                           dynamic_ncols=True, unit='step')
         self.degrade =  util.SRMDPreprocessing(
             self.hparams['scale'],
-            kernel_size=self.hparams['blur_kernel'],
+            kernel_size=self.hparams['kernel_size'],
             blur_type=self.hparams['blur_type'],
             sig_min=self.hparams['sig_min'],
             sig_max=self.hparams['sig_max'],
@@ -75,7 +77,7 @@ class Trainer:
             noise=self.hparams['noise']
         )
         for batch in train_pbar:
-            if training_step % hparams['val_check_interval'] == 0:
+            if training_step % hparams['val_check_interval'] == 0 and training_step:
                 with torch.no_grad():
                     model.eval()
                     self.validate(training_step)

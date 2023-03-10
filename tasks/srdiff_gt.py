@@ -1,6 +1,6 @@
 import matplotlib
 
-from tasks.srdiff import MSRDiffTrainer
+from tasks.srdiff import SRDiffTrainer
 from utils.dataset import SRDataSet
 
 matplotlib.use('Agg')
@@ -16,9 +16,10 @@ import imageio
 from skimage import transform
 import torch
 from glob import glob
+from models import common
 class IxiDataSet2(SRDataSet):
     def __init__(self, prefix='train'):
-        super().__init__('train' if prefix == 'train' else 'test')
+        # super().__init__('train' if prefix == 'train' else 'test')
         self.patch_size = hparams['patch_size']
         # self.patch_size_lr = hparams['patch_size'] // hparams['sr_scale']
         # self.scale = hparams['sr_scale']
@@ -34,20 +35,21 @@ class IxiDataSet2(SRDataSet):
 
         
         if prefix=='train':
-            self.train=True
+            self.train1=True
             self.images_hr=sorted(glob(hparams["train_hr"]))
+            self.len = len(self.images_hr)
             # self.images_lr=sorted(glob(hparams["train_lr"]))
             n_patches = 32*2000000#args.batch_size * args.test_every
             n_images = len(self.images_hr)
             self.repeat = max(n_patches//n_images,1)# TODO
         else:
-            self.train=False
+            self.train1=False
             self.images_hr=sorted(glob(hparams["test_hr"]))
             self.images_lr=sorted(glob(hparams["test_lr"]))
             # TODO 数量判定
             ## n_patches = 
     def __getitem__(self, index):
-        if self.train:
+        if self.train1:
             hr, filename = self._load_file(index)
             
             pair = self.get_patch_double(hr)
@@ -75,7 +77,7 @@ class IxiDataSet2(SRDataSet):
         
         hr = imageio.imread(f_hr)
         # lr = np.load(f_lr)
-        if not self.train:
+        if not self.train1:
             f_lr = self.images_lr[idx]
             lr = imageio.imread(f_lr)
             return lr,hr,filename
@@ -86,13 +88,13 @@ class IxiDataSet2(SRDataSet):
         # lr = transform.resize(hr, (h//self.scale, w//self.scale),order=3)
         return  hr, filename
     def _get_index(self, idx):
-        if self.train:
+        if self.train1:
             
             return idx % len(self.images_hr)
         else:
             return idx
     def __len__(self):
-        if self.train:
+        if self.train1:
             return len(self.images_hr) * self.repeat
         else:
             return len(self.images_hr)
@@ -114,16 +116,16 @@ class IxiDataSet2(SRDataSet):
     
         return [hr]
     def get_patch_double(self, hr):
-        scale = self.scale[self.idx_scale]
-        if self.train:
+        scale = hparams['scale']
+        if self.train1:
             out = []
-            hr = common.augment(hr) if not self.args.no_augment else hr
+            hr = augment(hr) #if not self.args.no_augment else hr
             # extract two patches from each image
             for _ in range(2):
-                hr_patch = common.get_patch(
+                hr_patch = get_patch(
                     hr,
-                    patch_size=self.args.patch_size,
-                    scale=scale
+                    patch_size=hparams['patch_size'],
+                    scale=scale,input_large=True
                 )
                 out.append(hr_patch)
         else:
@@ -193,10 +195,10 @@ class IxiDataSet(SRDataSet):
         return img_hr, img_lr
 
 
-class SRDiffIxi(MSRDiffTrainer):
+class SRDiffIxi(SRDiffTrainer):
     def __init__(self):
         super().__init__()
-        self.dataset_cls = IxiDataSet
+        self.dataset_cls = IxiDataSet2
 
 def get_patch(*args, patch_size=96, scale=2, multi=False, input_large=False):
     ih, iw = args[0].shape[:2]
@@ -235,7 +237,7 @@ def augment(*args, hflip=True, rot=True):
         
         return img
 
-    return [_augment(a) for a in args]
+    return _augment(*args)
 
 def np2Tensor(*args, rgb_range=255):
     def _np2Tensor(img):
@@ -245,7 +247,7 @@ def np2Tensor(*args, rgb_range=255):
 
         return tensor
 
-    return [_np2Tensor(a) for a in args]
+    return [_np2Tensor(a[0]) for a in args]
 
 def set_channel(*args, n_channels=3):
     def _set_channel(img):
@@ -260,4 +262,4 @@ def set_channel(*args, n_channels=3):
 
         return img
 
-    return _set_channel(args)
+    return [_set_channel(a[0]) for a in args]

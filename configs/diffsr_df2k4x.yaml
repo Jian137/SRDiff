@@ -1,7 +1,7 @@
 base_config:
   - ./diffsr_base.yaml
   - ./df2k4x.yaml
-trainer_cls: tasks.srdiff_df2k.SRDiffDf2k
+trainer_cls: tasks.srdiff_gt.SRDiffIxi
 
 # model
 unet_dim_mults: 1|2|3|4
@@ -10,3 +10,15 @@ decay_steps: 200000
 # train and test
 batch_size: 64
 max_updates: 400000
+train_hr: /home/vipsl416-4-zhanglize/Datasets/DIV2K/DIV2K_train_HR/*.png
+test_hr: /home/vipsl416-4-zhangliz/Datasets/DIV2K/DIV2K_valid_HR_mod/*.png
+test_lr: /home/vipsl416-4-zhangliz/Datasets/DIV2K/DIV2K_valid_LR_bicubic/X4/*.png
+scale: 4
+kernel_size: 21
+blur_type: 'iso_gaussian'
+sig_min: 2.6
+sig_max: 0.2
+lambda_min: 0.2
+lambda_max: 4.0
+noise: 0.0
+blur_kernel: 'iso_gaussian'

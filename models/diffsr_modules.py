@@ -6,7 +6,7 @@ from utils.hparams import hparams
 from .module_util import make_layer, initialize_weights
 from .commons import Mish, SinusoidalPosEmb, RRDB, Residual, Rezero, LinearAttention
 from .commons import ResnetBlock, Upsample, Block, Downsample
-from builder import MoCo
+from models.builder import MoCo
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder, self).__init__()

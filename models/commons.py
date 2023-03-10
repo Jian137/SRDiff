@@ -4,7 +4,11 @@ import torch.nn.functional as F
 from einops import rearrange
 from torch import nn
 from torch.nn import Parameter
-import common
+import sys
+sys.path.append("../../")
+sys.path.append("./")
+import models.common as common
+
 
 class DA_conv(nn.Module):
     def __init__(self, channels_in, channels_out, kernel_size, reduction):
