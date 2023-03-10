@@ -8,7 +8,7 @@ unet_dim_mults: 1|2|3|4
 decay_steps: 200000
 
 # train and test
-batch_size: 64
+batch_size: 16
 max_updates: 400000
 train_hr: /home/vipsl416-4-zhanglize/Datasets/DIV2K/DIV2K_train_HR/*.png
 test_hr: /home/vipsl416-4-zhangliz/Datasets/DIV2K/DIV2K_valid_HR_mod/*.png

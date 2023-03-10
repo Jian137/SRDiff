@@ -34,7 +34,7 @@ valid_monitor_mode: 'min'
 max_epochs: 1000
 max_updates: 600000
 amp: false
-batch_size: 32
+batch_size: 16
 eval_batch_size: 32
 num_workers: 8
 test_input_dir: ''

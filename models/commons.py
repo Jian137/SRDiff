@@ -13,17 +13,20 @@ import models.common as common
 class DA_conv(nn.Module):
     def __init__(self, channels_in, channels_out, kernel_size, reduction):
         super(DA_conv, self).__init__()
-        self.channels_out = channels_out
+
         self.channels_in = channels_in
+        if self.channels_in == 3:
+            self.channels_in = 64
+        self.channels_out = channels_out
         self.kernel_size = kernel_size
 
         self.kernel = nn.Sequential(
             nn.Linear(64, 64, bias=False),
             nn.LeakyReLU(0.1, True),
-            nn.Linear(64, 64 * self.kernel_size * self.kernel_size, bias=False)
+            nn.Linear(64, channels_out * self.kernel_size * self.kernel_size, bias=False)
         )
-        self.conv = common.default_conv(channels_in, channels_out, 1)
-        self.ca = CA_layer(channels_in, channels_out, reduction)
+        self.conv = common.default_conv(self.channels_out ,self.channels_out, 1)
+        self.ca = CA_layer(64, self.channels_out, reduction)
 
         self.relu = nn.LeakyReLU(0.1, True)
 
@@ -104,14 +107,16 @@ class Rezero(nn.Module):
 
 # building block modules
 
-class Block(nn.Module):
+class Block_DA(nn.Module):
     def __init__(self, dim, dim_out, groups=8):
         super().__init__()
         if groups == 0:
-
+            if dim == 3:
+                dim = 64
             self.pad=  nn.ReflectionPad2d(1)
+            self.conv1 = nn.Conv2d(dim, dim_out,1)
             self.da = DA_conv(dim, dim_out, 3, 8)
-            self.conv = nn.Conv2d(dim, dim_out, 3)
+            self.conv = nn.Conv2d(dim_out, dim_out, 3)
             self.mish = Mish()
 
         else:
@@ -124,12 +129,55 @@ class Block(nn.Module):
             )
 
     def forward(self, x,fea):
+        x = self.conv1(x)
         x = self.pad(x)
         x = self.da(x,fea)
         x = self.conv(x)
         x = self.mish(x)
         return x
+class Block(nn.Module):
+    def __init__(self, dim, dim_out, groups=8):
+        super().__init__()
+        if groups == 0:
+            self.block = nn.Sequential(
+                nn.ReflectionPad2d(1),
+                nn.Conv2d(dim, dim_out, 3),
+                Mish()
+            )
+        else:
+            self.block = nn.Sequential(
+                nn.ReflectionPad2d(1),
+                nn.Conv2d(dim, dim_out, 3),
+                nn.GroupNorm(groups, dim_out),
+                Mish()
+            )
 
+    def forward(self, x):
+        return self.block(x)
+
+
+class ResnetBlock_DA(nn.Module):
+    def __init__(self, dim, dim_out, *, time_emb_dim=0, groups=8):
+        super().__init__()
+        if time_emb_dim > 0:
+            self.mlp = nn.Sequential(
+                Mish(),
+                nn.Linear(time_emb_dim, dim_out)
+            )
+        if dim == 3:
+            dim = 64
+        self.block1 = Block_DA(dim, dim_out, groups=groups)
+        self.block2 = Block_DA(dim_out, dim_out, groups=groups)
+        self.res_conv = nn.Conv2d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
+
+    def forward(self, x, time_emb=None, fea=None, cond=None):
+        h = self.block1(x,fea)
+        if time_emb is not None:
+            h += self.mlp(time_emb)[:, :, None, None]
+        if cond is not None:
+            h += cond
+        h = self.block2(h,fea)
+        return h + self.res_conv(x)
 
 class ResnetBlock(nn.Module):
     def __init__(self, dim, dim_out, *, time_emb_dim=0, groups=8):
@@ -145,12 +193,12 @@ class ResnetBlock(nn.Module):
         self.res_conv = nn.Conv2d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
 
     def forward(self, x, time_emb=None, fea=None, cond=None):
-        h = self.block1(x,fea)
+        h = self.block1(x)
         if time_emb is not None:
             h += self.mlp(time_emb)[:, :, None, None]
         if cond is not None:
             h += cond
-        h = self.block2(h,fea)
+        h = self.block2(h)
         return h + self.res_conv(x)
 
 

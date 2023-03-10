@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from utils.hparams import hparams
 from .module_util import make_layer, initialize_weights
 from .commons import Mish, SinusoidalPosEmb, RRDB, Residual, Rezero, LinearAttention
-from .commons import ResnetBlock, Upsample, Block, Downsample
+from .commons import ResnetBlock, Upsample, Block, Downsample,ResnetBlock_DA
 from models.builder import MoCo
 class Encoder(nn.Module):
     def __init__(self):
@@ -86,6 +86,9 @@ class RRDBNet(nn.Module):
         else:
             return out
 
+class Mish(nn.Module):
+    def forward(self, x):
+        return x * torch.tanh(F.softplus(x))
 
 class Unet(nn.Module):
     def __init__(self, dim, out_dim=None, dim_mults=(1, 2, 4, 8), cond_dim=32):
@@ -104,7 +107,12 @@ class Unet(nn.Module):
             Mish(),
             nn.Linear(dim * 4, dim)
         )
-
+        self.compress = nn.Sequential(
+            nn.Linear(256, 64, bias=False),
+            nn.LeakyReLU(0.1, True)
+        )
+        self.conv = nn.Conv2d(3,64,3,1,1)
+        self.mish1 = Mish()
         self.downs = nn.ModuleList([])
         self.ups = nn.ModuleList([])
         num_resolutions = len(in_out)
@@ -113,8 +121,8 @@ class Unet(nn.Module):
             is_last = ind >= (num_resolutions - 1)
 
             self.downs.append(nn.ModuleList([
-                ResnetBlock(dim_in, dim_out, time_emb_dim=dim, groups=groups),
-                ResnetBlock(dim_out, dim_out, time_emb_dim=dim, groups=groups),
+                ResnetBlock_DA(dim_in, dim_out, time_emb_dim=dim, groups=groups),
+                ResnetBlock_DA(dim_out, dim_out, time_emb_dim=dim, groups=groups),
                 Downsample(dim_out) if not is_last else nn.Identity()
             ]))
 
@@ -164,8 +172,11 @@ class Unet(nn.Module):
             fea, logits, labels = self.E(x_query, x_key)
         else:
             fea = self.E(x2, x2)
+        fea = self.compress(fea)
         t = self.time_pos_emb(time)
         t = self.mlp(t)
+        x = self.mish1(self.conv(x))
+
 
         h = []
         cond = self.cond_proj(torch.cat(cond[2::3], 1))
@@ -186,8 +197,8 @@ class Unet(nn.Module):
 
         for resnet, resnet2, upsample in self.ups:
             x = torch.cat((x, h.pop()), dim=1)
-            x = resnet(x, t,fea)
-            x = resnet2(x, t,fea)
+            x = resnet(x, t)
+            x = resnet2(x, t)
             x = upsample(x)
 
         return self.final_conv(x)
