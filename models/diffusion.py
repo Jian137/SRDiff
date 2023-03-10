@@ -180,7 +180,7 @@ class GaussianDiffusion(nn.Module):
         x_tp1_gt = self.q_sample(x_start=x_start, t=t, noise=noise)
         x_t_gt = self.q_sample(x_start=x_start, t=t - 1, noise=noise)
         noise_pred = self.denoise_fn(x_tp1_gt, t, cond, img_lr_up, img_hr_all)
-        x_t_pred, x0_pred = self.p_sample(x_tp1_gt, t, cond, img_lr_up, noise_pred=noise_pred)
+        x_t_pred, x0_pred = self.p_sample(x_tp1_gt, t, cond, img_lr_up[:,0,:,:,:], noise_pred=noise_pred)
 
         if self.loss_type == 'l1':
             loss = (noise - noise_pred).abs().mean()
