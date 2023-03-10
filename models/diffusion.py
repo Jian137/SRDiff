@@ -152,14 +152,14 @@ class GaussianDiffusion(nn.Module):
             if hparams['fix_rrdb']:
                 self.rrdb.eval()
                 with torch.no_grad():
-                    rrdb_out, cond = self.rrdb(img_lr, True)
+                    rrdb_out, cond = self.rrdb(img_lr[:,0,:,:,:], True)
             else:
-                rrdb_out, cond = self.rrdb(img_lr, True)
+                rrdb_out, cond = self.rrdb(img_lr[:,0,:,:,:], True)
         else:
-            rrdb_out = img_lr_up
-            cond = img_lr
-        x = self.img2res(x, img_lr_up)
-        p_losses, x_tp1, noise_pred, x_t, x_t_gt, x_0 = self.p_losses(x, t, cond, img_lr_up,img_hr_all, *args, **kwargs)
+            rrdb_out = img_lr_up[:,0,:,:,:]
+            cond = img_lr[:,0,:,:,:]
+        x = self.img2res(x, img_lr_up[:,0,:,:,:])
+        p_losses, x_tp1, noise_pred, x_t, x_t_gt, x_0 = self.p_losses(x, t, cond, img_lr_up[:,0,:,:,:],img_hr_all, *args, **kwargs)
         ret = {'q': p_losses}
         if not hparams['fix_rrdb']:
             if hparams['aux_l1_loss']:
@@ -170,9 +170,9 @@ class GaussianDiffusion(nn.Module):
                 ret['aux_percep'] = self.percep_loss_fn[0](img_hr, rrdb_out)
             # ret['contrast_loss'] = self.contrast_loss(img_hr,rrdb_out)# TODO 添加对比损失
         # x_recon = self.res2img(x_recon, img_lr_up)
-        x_tp1 = self.res2img(x_tp1, img_lr_up)
-        x_t = self.res2img(x_t, img_lr_up)
-        x_t_gt = self.res2img(x_t_gt, img_lr_up)
+        x_tp1 = self.res2img(x_tp1, img_lr_up[:,0,:,:,:])
+        x_t = self.res2img(x_t, img_lr_up[:,0,:,:,:])
+        x_t_gt = self.res2img(x_t_gt, img_lr_up[:,0,:,:,:])
         return ret, (x_tp1, x_t_gt, x_t), t
 
     def p_losses(self, x_start, t, cond, img_lr_up,img_hr_all, noise=None):
