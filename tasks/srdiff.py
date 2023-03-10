@@ -59,11 +59,12 @@ class SRDiffTrainer(Trainer):
 
     def training_step(self, batch):
         img_hr = batch['img_hr']
+        img_hr_all = batch['img_hr_all']
         with torch.no_grad():
             img_lr,b_kernels = self.degrade(img_hr)
         # img_lr = batch['img_lr']
         #img_lr_up = batch['img_lr_up']# TODO 对img_lr 上采样
         img_lr_up = torch.nn.functional.interpolate(img_lr, scale_factor=self.hparams['scale'], mode='bicubic', align_corners=False)
-        losses, _, _ = self.model(img_hr, img_lr, img_lr_up)
+        losses, _, _ = self.model(img_hr, img_lr, img_lr_up, img_hr_all)
         total_loss = sum(losses.values())
         return losses, total_loss

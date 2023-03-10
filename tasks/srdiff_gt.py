@@ -50,14 +50,14 @@ class IxiDataSet2(SRDataSet):
         if self.train:
             hr, filename = self._load_file(index)
             
-            pair = self.get_patch(hr)
+            pair = self.get_patch_double(hr)
             # h,w,_ = pair[1].shape
             
             # lr_up = transform.resize(lr, (h, w),order=3)
             # pair.append(lr_up)
             hr = set_channel(*pair,n_channels=3)
             pair_t = np2Tensor(*pair, rgb_range=255)
-            return {'img_hr': pair_t[0], 
+            return {'img_hr': pair_t[0],'img_hr_all':pair_t,
                 'item_name': filename}
         else:
             lr,hr = filename = self._load_file(index)
@@ -75,7 +75,7 @@ class IxiDataSet2(SRDataSet):
         
         hr = imageio.imread(f_hr)
         # lr = np.load(f_lr)
-        if !self.train:
+        if not self.train:
             f_lr = self.images_lr[idx]
             lr = imageio.imread(f_lr)
             return lr,hr,filename
@@ -111,8 +111,24 @@ class IxiDataSet2(SRDataSet):
         # else:
         #     ih, iw = lr.shape[:2]
         #     hr = hr[0:ih * scale, 0:iw * scale]
-
+    
         return [hr]
+    def get_patch_double(self, hr):
+        scale = self.scale[self.idx_scale]
+        if self.train:
+            out = []
+            hr = common.augment(hr) if not self.args.no_augment else hr
+            # extract two patches from each image
+            for _ in range(2):
+                hr_patch = common.get_patch(
+                    hr,
+                    patch_size=self.args.patch_size,
+                    scale=scale
+                )
+                out.append(hr_patch)
+        else:
+            out = [hr]
+        return out
 class IxiDataSet(SRDataSet):
     def __init__(self, prefix='train'):
         super().__init__('train' if prefix == 'train' else 'test')

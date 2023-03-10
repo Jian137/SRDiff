@@ -143,7 +143,7 @@ class GaussianDiffusion(nn.Module):
         model_mean, posterior_variance, posterior_log_variance = self.q_posterior(x_start=x_recon, x_t=x, t=t)
         return model_mean, posterior_variance, posterior_log_variance, x_recon
 
-    def forward(self, img_hr, img_lr, img_lr_up, t=None, *args, **kwargs):
+    def forward(self, img_hr, img_lr, img_lr_up,img_hr_all, t=None, *args, **kwargs):
         x = img_hr
         b, *_, device = *x.shape, x.device
         t = torch.randint(0, self.num_timesteps, (b,), device=device).long() \
@@ -159,7 +159,7 @@ class GaussianDiffusion(nn.Module):
             rrdb_out = img_lr_up
             cond = img_lr
         x = self.img2res(x, img_lr_up)
-        p_losses, x_tp1, noise_pred, x_t, x_t_gt, x_0 = self.p_losses(x, t, cond, img_lr_up, *args, **kwargs)
+        p_losses, x_tp1, noise_pred, x_t, x_t_gt, x_0 = self.p_losses(x, t, cond, img_lr_up,img_hr_all, *args, **kwargs)
         ret = {'q': p_losses}
         if not hparams['fix_rrdb']:
             if hparams['aux_l1_loss']:
@@ -175,11 +175,11 @@ class GaussianDiffusion(nn.Module):
         x_t_gt = self.res2img(x_t_gt, img_lr_up)
         return ret, (x_tp1, x_t_gt, x_t), t
 
-    def p_losses(self, x_start, t, cond, img_lr_up, noise=None):
+    def p_losses(self, x_start, t, cond, img_lr_up,img_hr_all, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
         x_tp1_gt = self.q_sample(x_start=x_start, t=t, noise=noise)
         x_t_gt = self.q_sample(x_start=x_start, t=t - 1, noise=noise)
-        noise_pred = self.denoise_fn(x_tp1_gt, t, cond, img_lr_up)
+        noise_pred = self.denoise_fn(x_tp1_gt, t, cond, img_lr_up, img_hr_all)
         x_t_pred, x0_pred = self.p_sample(x_tp1_gt, t, cond, img_lr_up, noise_pred=noise_pred)
 
         if self.loss_type == 'l1':

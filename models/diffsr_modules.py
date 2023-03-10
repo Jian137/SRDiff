@@ -155,15 +155,15 @@ class Unet(nn.Module):
 
         self.apply(_apply_weight_norm)
 
-    def forward(self, x, time, cond, img_lr_up):
+    def forward(self, x, time, cond, img_lr_up, x2):
         if self.training:
-            x_query = x[:, 0, ...]                          # b, c, h, w
-            x_key = x[:, 1, ...]                            # b, c, h, w
+            x_query = x2[:, 0, ...]                          # b, c, h, w
+            x_key = x2[:, 1, ...]                            # b, c, h, w
 
             # degradation-aware represenetion learning
             fea, logits, labels = self.E(x_query, x_key)
         else:
-            fea = self.E(x, x)
+            fea = self.E(x2, x2)
         t = self.time_pos_emb(time)
         t = self.mlp(t)
 
