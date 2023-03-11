@@ -58,6 +58,7 @@ class Trainer:
 
     def train(self):
         model = self.build_model()
+        model.load_state_dict(torch.load('/home/vipsl416-4-zhanglize/NAS/Code/SISR/SRDiff/utils/zzz.pt'), strict = False)
         optimizer = self.build_optimizer(model)
         self.global_step = training_step = load_checkpoint(model, optimizer, hparams['work_dir'])
         self.scheduler = scheduler = self.build_scheduler(optimizer)

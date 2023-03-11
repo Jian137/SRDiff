@@ -114,9 +114,8 @@ class Block_DA(nn.Module):
             if dim == 3:
                 dim = 64
             self.pad=  nn.ReflectionPad2d(1)
-            self.conv1 = nn.Conv2d(dim, dim_out,1)
             self.da = DA_conv(dim, dim_out, 3, 8)
-            self.conv = nn.Conv2d(dim_out, dim_out, 3)
+            self.conv = nn.Conv2d(dim, dim_out, 3)
             self.mish = Mish()
 
         else:
@@ -129,10 +128,10 @@ class Block_DA(nn.Module):
             )
 
     def forward(self, x,fea):
-        x = self.conv1(x)
+        x = self.conv(x)
         x = self.pad(x)
         x = self.da(x,fea)
-        x = self.conv(x)
+        
         x = self.mish(x)
         return x
 class Block(nn.Module):
