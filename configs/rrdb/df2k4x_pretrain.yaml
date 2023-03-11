@@ -1,7 +1,7 @@
 base_config:
   - ../sr_base.yaml
   - ../df2k4x.yaml
-trainer_cls: tasks.rrdb.RRDBDf2kTask
+trainer_cls: tasks.srdiff_gt.SRDiffIxi
 # model
 hidden_size: 64
 lr: 0.0002

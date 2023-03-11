@@ -78,7 +78,7 @@ class Trainer:
             noise=self.hparams['noise']
         )
         for batch in train_pbar:
-            if training_step % hparams['val_check_interval'] == 0 and training_step:
+            if training_step % hparams['val_check_interval'] == 0 and training_step and False:
                 with torch.no_grad():
                     model.eval()
                     self.validate(training_step)

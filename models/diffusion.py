@@ -68,7 +68,7 @@ class GaussianDiffusion(nn.Module):
         # condition net
         self.rrdb = rrdb_net
         self.ssim_loss = SSIM(window_size=11)
-        self.contrast_loss = torch.nn.CrossEntropyLoss().cuda()
+        self.loss_contrast = torch.nn.CrossEntropyLoss().cuda()
         if hparams['aux_percep_loss']:
             self.percep_loss_fn = [PerceptualLoss()]
 
@@ -179,7 +179,7 @@ class GaussianDiffusion(nn.Module):
         noise = default(noise, lambda: torch.randn_like(x_start))
         x_tp1_gt = self.q_sample(x_start=x_start, t=t, noise=noise)
         x_t_gt = self.q_sample(x_start=x_start, t=t - 1, noise=noise)
-        noise_pred = self.denoise_fn(x_tp1_gt, t, cond, img_lr_up, img_hr_all)
+        noise_pred ,out,target= self.denoise_fn(x_tp1_gt, t, cond, img_lr_up, img_hr_all)
         x_t_pred, x0_pred = self.p_sample(x_tp1_gt, t, cond, img_lr_up, noise_pred=noise_pred)
 
         if self.loss_type == 'l1':
@@ -191,6 +191,7 @@ class GaussianDiffusion(nn.Module):
             loss = loss + (1 - self.ssim_loss(noise, noise_pred))
         else:
             raise NotImplementedError()
+        loss += self.loss_contrast(out,target)
         return loss, x_tp1_gt, noise_pred, x_t_pred, x_t_gt, x0_pred
 
     def q_sample(self, x_start, t, noise=None):

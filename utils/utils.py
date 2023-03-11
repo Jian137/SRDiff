@@ -123,7 +123,7 @@ def get_all_ckpts(work_dir, steps=None):
 def load_checkpoint(model, optimizer, work_dir):
     checkpoint, _ = get_last_checkpoint(work_dir)
     if checkpoint is not None:
-        model.load_state_dict(checkpoint['state_dict']['model'])
+        model.load_state_dict(checkpoint['state_dict']['model'],strict=False)
         model.cuda()
         optimizer.load_state_dict(checkpoint['optimizer_states'][0])
         training_step = checkpoint['global_step']

@@ -164,19 +164,19 @@ class Unet(nn.Module):
         self.apply(_apply_weight_norm)
 
     def forward(self, x, time, cond, img_lr_up, x2):
-        if self.training:
-            x_query = x2[:, 0, ...]                          # b, c, h, w
-            x_key = x2[:, 1, ...]                            # b, c, h, w
+        
+        x_query = x2[:, 0, ...]                          # b, c, h, w
+        x_key = x2[:, 1, ...]                            # b, c, h, w
 
-            # degradation-aware represenetion learning
-            fea, logits, labels = self.E(x_query, x_key)
-        else:
-            fea = self.E(x2, x2)
+        # degradation-aware represenetion learning
+        fea, logits, labels = self.E(x_query, x_key)
+        
         fea = self.compress(fea)
         t = self.time_pos_emb(time)
         t = self.mlp(t)
         x = self.mish1(self.conv(x))
 
+        
 
         h = []
         cond = self.cond_proj(torch.cat(cond[2::3], 1))
@@ -201,7 +201,7 @@ class Unet(nn.Module):
             x = resnet2(x, t)
             x = upsample(x)
 
-        return self.final_conv(x)
+        return self.final_conv(x), logits, labels
 
     def make_generation_fast_(self):
         def remove_weight_norm(m):

@@ -114,42 +114,42 @@ class MoCo(nn.Module):
         Output:
             logits, targets
         """
-        if self.training:
+        # if self.training:
             # compute query features
-            embedding, q = self.encoder_q(im_q)  # queries: NxC
-            q = nn.functional.normalize(q, dim=1)
+        embedding, q = self.encoder_q(im_q)  # queries: NxC
+        q = nn.functional.normalize(q, dim=1)
 
-            # compute key features
-            with torch.no_grad():  # no gradient to keys
-                self._momentum_update_key_encoder()  # update the key encoder
+        # compute key features
+        with torch.no_grad():  # no gradient to keys
+            self._momentum_update_key_encoder()  # update the key encoder
 
-                _, k = self.encoder_k(im_k)  # keys: NxC
-                k = nn.functional.normalize(k, dim=1)
+            _, k = self.encoder_k(im_k)  # keys: NxC
+            k = nn.functional.normalize(k, dim=1)
 
-            # compute logits
-            # Einstein sum is more intuitive
-            # positive logits: Nx1
-            l_pos = torch.einsum('nc,nc->n', [q, k]).unsqueeze(-1)
-            # negative logits: NxK
-            l_neg = torch.einsum('nc,ck->nk', [q, self.queue.clone().detach()])
+        # compute logits
+        # Einstein sum is more intuitive
+        # positive logits: Nx1
+        l_pos = torch.einsum('nc,nc->n', [q, k]).unsqueeze(-1)
+        # negative logits: NxK
+        l_neg = torch.einsum('nc,ck->nk', [q, self.queue.clone().detach()])
 
-            # logits: Nx(1+K)
-            logits = torch.cat([l_pos, l_neg], dim=1)
+        # logits: Nx(1+K)
+        logits = torch.cat([l_pos, l_neg], dim=1)
 
-            # apply temperature
-            logits /= self.T
+        # apply temperature
+        logits /= self.T
 
-            # labels: positive key indicators
-            labels = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
+        # labels: positive key indicators
+        labels = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
 
-            # dequeue and enqueue
-            self._dequeue_and_enqueue(k)
+        # dequeue and enqueue
+        self._dequeue_and_enqueue(k)
 
-            return embedding, logits, labels
-        else:
-            embedding, _ = self.encoder_q(im_q)
+        return embedding, logits, labels
+        # else:
+        #     embedding, _ = self.encoder_q(im_q)
 
-            return embedding
+        #     return embedding
 
 
 # utils
