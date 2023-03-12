@@ -6,7 +6,7 @@ aux_ssim_loss: false
 base_config:
 - ./diffsr_base.yaml
 - ./df2k4x.yaml
-batch_size: 16
+batch_size: 32
 beta_end: 0.02
 beta_s: 0.008
 beta_schedule: cosine

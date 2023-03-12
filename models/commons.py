@@ -128,8 +128,9 @@ class Block_DA(nn.Module):
             )
 
     def forward(self, x,fea):
-        x = self.conv(x)
         x = self.pad(x)
+        x = self.conv(x)
+        
         x = self.da(x,fea)
         
         x = self.mish(x)

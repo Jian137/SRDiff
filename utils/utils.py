@@ -125,8 +125,9 @@ def load_checkpoint(model, optimizer, work_dir):
     if checkpoint is not None:
         model.load_state_dict(checkpoint['state_dict']['model'],strict=False)
         model.cuda()
-        optimizer.load_state_dict(checkpoint['optimizer_states'][0])
+        # optimizer.load_state_dict(checkpoint['optimizer_states'][0])
         training_step = checkpoint['global_step']
+        training_step = 0
         del checkpoint
         torch.cuda.empty_cache()
     else:

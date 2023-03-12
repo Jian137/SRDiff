@@ -11,7 +11,10 @@
             "program": "tasks/trainer.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--config","configs/diffsr_df2k4x.yaml","--exp_name","diffsr_div2k_1","--reset", "--hparams","rrdb_ckpt=checkpoints/rrdb_div2k_1", "--exp_name","diffsr_div2k_bic",]
+            "args": ["--config","configs/diffsr_df2k4x.yaml","--exp_name","diffsr_div2k_1","--reset", "--hparams","rrdb_ckpt=checkpoints/rrdb_div2k_1", "--exp_name","diffsr_div2k_bic",],
+            "env":{
+                "CUDA_VISIBLE_DEVICES":"1"
+            }
         }
     ]
 }
