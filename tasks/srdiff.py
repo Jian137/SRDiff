@@ -37,6 +37,7 @@ class SRDiffTrainer(Trainer):
         img_hr = sample['img_hr']
         img_lr = sample['img_lr']
         img_lr_up = sample['img_lr_up']
+        img_hr_all = torch.stack(sample['img_hr_all'],dim=1)# 仿照train_step修改
         img_sr, rrdb_out = self.model.sample(img_lr, img_lr_up, img_hr.shape)
         for b in range(img_sr.shape[0]):
             s = self.measure.measure(img_sr[b], img_hr[b], img_lr[b], hparams['sr_scale'])

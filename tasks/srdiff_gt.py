@@ -62,11 +62,12 @@ class IxiDataSet2(SRDataSet):
             return {'img_hr': pair_t[0],'img_hr_all':pair_t,
                 'item_name': filename}
         else:
-            lr,hr = filename = self._load_file(index)
+            lr,hr ,filename = self._load_file(index)
             # pair = self.get_patch(hr,lr)
             hr ,lr = set_channel(hr,lr,n_channels=3)
             pair_t = np2Tensor(hr,lr, rgb_range=255)
-            return {'img_hr': pair_t[0],'img_lr':pair_t[0], 
+            img_hr_all = [hr,hr]
+            return {'img_hr': pair_t[1],'img_lr':pair_t[0], 'img_hr_all':img_hr_all,
                 'item_name': filename}
     def _load_file(self, idx):
         idx = self._get_index(idx)
@@ -182,6 +183,8 @@ class IxiDataSet(SRDataSet):
             'img_lr_up': img_lr_up, 'item_name': item['item_name'],
             'loc': np.array(item['loc']), 'loc_bdr': np.array(item['loc_bdr'])
         }
+        
+            
 
     def __len__(self):
         return self.len

@@ -78,10 +78,10 @@ class Trainer:
             noise=self.hparams['noise']
         )
         for batch in train_pbar:
-            if training_step % hparams['val_check_interval'] == 0 and training_step and False:
-                with torch.no_grad():
-                    model.eval()
-                    self.validate(training_step)
+            if training_step % hparams['val_check_interval'] == 0 and training_step :
+                # with torch.no_grad():
+                #     model.eval()
+                #     self.validate(training_step)
                 save_checkpoint(model, optimizer, self.work_dir, training_step, hparams['num_ckpt_keep'])
             model.train()
             batch = move_to_cuda(batch)
@@ -104,6 +104,7 @@ class Trainer:
             if self.first_val and batch_idx > hparams['num_sanity_val_steps']:  # 每次运行的第一次validation只跑一小部分数据，来验证代码能否跑通
                 break
             batch = move_to_cuda(batch)
+            # TODO 修改data 在sample_and_test
             img, rrdb_out, ret = self.sample_and_test(batch)
             img_hr = batch['img_hr']
             img_lr = batch['img_lr']

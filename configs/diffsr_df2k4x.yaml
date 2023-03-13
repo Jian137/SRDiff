@@ -2,7 +2,7 @@ base_config:
   - ./diffsr_base.yaml
   - ./df2k4x.yaml
 trainer_cls: tasks.srdiff_gt.SRDiffIxi
-
+valid_cls: ~
 # model
 unet_dim_mults: 1|2|3|4
 decay_steps: 200000

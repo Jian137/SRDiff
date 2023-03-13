@@ -127,7 +127,7 @@ def load_checkpoint(model, optimizer, work_dir):
         model.cuda()
         # optimizer.load_state_dict(checkpoint['optimizer_states'][0])
         training_step = checkpoint['global_step']
-        training_step = 0
+        # training_step = 0
         del checkpoint
         torch.cuda.empty_cache()
     else:

@@ -1,0 +1,2 @@
+- [ ] models/diffusion.py 中sample输入修改？
+- [ ] 测试输入部分在tasks/srdiff.py SRDiffTrainer sampel and test 部分相应修改
