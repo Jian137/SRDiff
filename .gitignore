@@ -1,4 +1,4 @@
 # Default ignored files
 *.pt
-*.cpkt
-checkpoints/*/tb_logs
+*.ckpt
+checkpoints/*
